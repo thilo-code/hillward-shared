@@ -1,0 +1,19 @@
+{
+  "name": "hillward-shared",
+  "version": "1.0.0",
+  "description": "Gemeinsame Matching-/Verfügbarkeitslogik für hillward-rental und lightbase.",
+  "type": "module",
+  "main": "src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./itemMatching": "./src/itemMatching.mjs",
+    "./dateRange": "./src/dateRange.mjs",
+    "./availability": "./src/availability.mjs"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.9"
+  }
+}
