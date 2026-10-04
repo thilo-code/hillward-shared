@@ -6,7 +6,7 @@ Gemeinsame Matching-/Verfügbarkeitslogik für [hillward-rental](https://github.
 
 - `src/itemMatching.mjs` — `normalizeName`, `isHillwardSource`, `findMatchingType` (exakte Übereinstimmung nach Normalisierung, dann Aliase — kein Fuzzy-Matching).
 - `src/dateRange.mjs` — `rangesOverlap` (einfacher ISO-String-Vergleich).
-- `src/lightlistPdf.mjs` — Lightlist-PDF-Vorlage im Hillward-CI für beide Tools. `renderLightlistHtml(data, opts)` liefert ein druckfertiges A4-HTML-Dokument; Adapter `lightlistFromLightbase(projekt)` (projekt.json) und `lightlistFromRental({ project, bookings, itemTypes, externalItems })`. Im Browser: `printLightlistHtml(html)` → Druckdialog „Als PDF sichern“. Serverseitig: HTML mit Chromium (Puppeteer/Playwright, `preferCSSPageSize: true`, `printBackground: true`) in PDF rendern.
+- `src/lightlistPdf.mjs` — Lightlist-PDF-Vorlage im Hillward-CI für beide Tools. `renderLightlistHtml(data, opts)` liefert ein druckfertiges A4-HTML-Dokument; Adapter `lightlistFromLightbase(projekt)` (projekt.json, Transport aus `meta.transporter`) und `lightlistFromRental({ project, bookings, itemTypes, externalItems, transport })`. Im Browser: `printLightlistHtml(html)` → Druckdialog „Als PDF sichern“. Serverseitig: HTML mit Chromium (Puppeteer/Playwright, `preferCSSPageSize: true`, `printBackground: true`) in PDF rendern.
 - `src/availability.mjs` — `findConflicts`, `BLOCKING_PROJECT_STATUSES` (kanonische Quelle für die drei blockierenden Projekt-Status: `angefragt`, `bestaetigt`, `laufend`).
 
 ## Was hier bewusst NICHT lebt

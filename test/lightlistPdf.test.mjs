@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   buildLightlistRows, summarizeLightlist, rentalSectionFor, groupLightlistSections, sourceKind, formatRange,
-  lightlistFromLightbase, lightlistFromRental, renderLightlistHtml,
+  lightlistFromLightbase, lightlistFromRental, renderLightlistHtml, transportLabel,
 } from '../src/lightlistPdf.mjs'
 
 const projekt = {
@@ -113,5 +113,21 @@ describe('Rubriken', () => {
   it('weist leere Quelle als SONSTIGES aus', () => {
     const html = renderLightlistHtml({ number: 1, name: 'x', items: [{ section: 'Lichtformer', qty: 2, name: 'Floppy UB', source: '' }] })
     expect(html).toContain('<span class="t">SONSTIGES</span>')
+  })
+})
+
+describe('Transport', () => {
+  it('übersetzt meta.transporter aus lightbase', () => {
+    expect(transportLabel('E-Sprinter')).toBe('Hillward E-Sprinter')
+    expect(transportLabel('Hillward Transporter')).toBe('Hillward E-Sprinter')
+    expect(transportLabel('Miettransporter')).toBe('Mietsprinter')
+    expect(transportLabel('')).toBe('Offen')
+  })
+  it('steht im Kopfbereich beider Adapter', () => {
+    const p = { ...projekt, cfg: { ...projekt.cfg, meta: { ...projekt.cfg.meta, transporter: 'Miettransporter' } } }
+    expect(lightlistFromLightbase(p).transport).toBe('Mietsprinter')
+    expect(lightlistFromRental({ project: { name: 'x' } }).transport).toBe('Offen')
+    expect(lightlistFromRental({ project: { name: 'x' }, transport: 'Hillward E-Sprinter' }).transport).toBe('Hillward E-Sprinter')
+    expect(renderLightlistHtml(lightlistFromLightbase(p))).toContain('<div class="k">Transport</div><div class="v">Mietsprinter</div>')
   })
 })
