@@ -16,12 +16,12 @@ const STAR_PATH = 'M5.06,3.6l.84-3.6.84,3.6c.2.87.89,1.56,1.76,1.76l3.6.84-3.6.8
 const LOGO_BASELINE = 24.09
 
 /** Standard-Reihenfolge der Rubriken; unbekannte Rubriken folgen in Eingangsreihenfolge. */
-export const LIGHTLIST_SECTION_ORDER = ['Licht', 'Lichtformer', 'Butterfly', 'Grip', 'Strom', 'Folien', 'Sonstiges']
+export const LIGHTLIST_SECTION_ORDER = ['Licht', 'Lichtsteuerung', 'Lichtformer', 'Butterfly', 'Grip', 'Strom', 'Folien', 'Sonstiges']
 
 /** Zuordnung item_types.category (hillward-rental) -> Rubrik. Überschreibbar per Option sectionForCategory. */
 export const RENTAL_CATEGORY_SECTIONS = {
   licht: 'Licht', grip: 'Grip', strom: 'Strom', kabel: 'Strom',
-  zubehoer: 'Lichtformer', steuerung: 'Steuerung', sonstiges: 'Sonstiges',
+  zubehoer: 'Lichtformer', steuerung: 'Lichtsteuerung', sonstiges: 'Sonstiges',
 }
 
 /** Rubrik für einen Katalog-Typ aus hillward-rental. Butterfly-Stoffe/-Rahmen („12x12 …“, „20x20 …“) liegen in

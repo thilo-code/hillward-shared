@@ -108,6 +108,7 @@ describe('Rubriken', () => {
     expect(rentalSectionFor({ category: 'zubehoer', name: '12x12 China Silk' })).toBe('Butterfly')
     expect(rentalSectionFor({ category: 'zubehoer', name: '20x20 Full Grid Cloth' })).toBe('Butterfly')
     expect(rentalSectionFor({ category: 'kabel', name: 'Schuko 10m' })).toBe('Strom')
+    expect(rentalSectionFor({ category: 'steuerung', name: '3 KW Handdimmer DMX' })).toBe('Lichtsteuerung')
   })
   it('weist leere Quelle als SONSTIGES aus', () => {
     const html = renderLightlistHtml({ number: 1, name: 'x', items: [{ section: 'Lichtformer', qty: 2, name: 'Floppy UB', source: '' }] })
