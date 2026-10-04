@@ -1,14 +1,15 @@
 {
   "name": "hillward-shared",
-  "version": "1.0.0",
-  "description": "Gemeinsame Matching-/Verfügbarkeitslogik für hillward-rental und lightbase.",
+  "version": "1.1.0",
+  "description": "Gemeinsame Logik für hillward-rental und lightbase: Matching, Verfügbarkeit, Lightlist-PDF-Vorlage.",
   "type": "module",
   "main": "src/index.mjs",
   "exports": {
     ".": "./src/index.mjs",
     "./itemMatching": "./src/itemMatching.mjs",
     "./dateRange": "./src/dateRange.mjs",
-    "./availability": "./src/availability.mjs"
+    "./availability": "./src/availability.mjs",
+    "./lightlistPdf": "./src/lightlistPdf.mjs"
   },
   "scripts": {
     "test": "vitest run"
