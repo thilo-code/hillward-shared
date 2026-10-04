@@ -111,6 +111,18 @@ export function groupLightlistSections(rows, order = 'input') {
 }
 
 /**
+ * Transport-Angabe fuer den Kopfbereich. lightbase speichert meta.transporter als
+ * 'E-Sprinter' (eigener Transporter), 'Miettransporter' oder leer (noch offen).
+ */
+export function transportLabel(value) {
+  const v = String(value ?? '').trim()
+  if (!v) return 'Offen'
+  if (/^(e-sprinter|hillward transporter)$/i.test(v)) return 'Hillward E-Sprinter'
+  if (/miet/i.test(v)) return 'Mietsprinter'
+  return v
+}
+
+/**
  * Adapter Lightbase: projekt.json ({ cfg, list, ref }) -> Lightlist-Daten.
  * @param {object} projekt
  * @param {{vorlage?:string, ausleiheZeit?:string, rueckleiheZeit?:string}} [opts]
@@ -124,6 +136,7 @@ export function lightlistFromLightbase(projekt, opts = {}) {
     dreh: formatRange(meta.dreh?.start, meta.dreh?.end),
     ausleihe: formatRange(meta.ausleihe?.start, meta.ausleihe?.end, opts.ausleiheZeit ?? '14:00–17:00 Uhr'),
     rueckleihe: formatRange(meta.rueckleihe?.start, meta.rueckleihe?.end, opts.rueckleiheZeit ?? '10:00–12:00 Uhr'),
+    transport: transportLabel(meta.transporter),
     sectionOrder: 'input',
     items: (projekt?.list?.items ?? []).map((i) => ({ section: i.section, qty: i.qty, name: i.name, source: i.source, note: i.note, qtyRent: i.qtyRent })),
   }
@@ -133,10 +146,10 @@ export function lightlistFromLightbase(projekt, opts = {}) {
  * Adapter hillward-rental: Projekt + Buchungen (Eigenbestand) + external_items (Miete) -> Lightlist-Daten.
  * bookings: { item_type_id, quantity } (quantity null = Einzelgerät = 1), gleiche Typen werden zusammengefasst.
  * @param {{ project:object, number?:string|number, bookings?:object[], itemTypes?:object[], externalItems?:object[],
- *           ausleihe?:string, rueckleihe?:string, vorlage?:string, sectionForCategory?:(category:string, itemType:object)=>string }} input
+ *           ausleihe?:string, rueckleihe?:string, transport?:string, vorlage?:string, sectionForCategory?:(category:string, itemType:object)=>string }} input
  */
 export function lightlistFromRental({ project = {}, number, bookings = [], itemTypes = [], externalItems = [],
-  ausleihe = '', rueckleihe = '', vorlage = '', sectionForCategory } = {}) {
+  ausleihe = '', rueckleihe = '', transport = '', vorlage = '', sectionForCategory } = {}) {
   const typeById = new Map(itemTypes.map((t) => [t.id, t]))
   const toSection = sectionForCategory ? (t) => sectionForCategory(t.category, t) : rentalSectionFor
   const own = new Map()
@@ -157,6 +170,7 @@ export function lightlistFromRental({ project = {}, number, bookings = [], itemT
     vorlage,
     dreh: formatRange(project.start_date, project.end_date),
     ausleihe, rueckleihe,
+    transport: transport || 'Offen',
     sectionOrder: 'standard',
     items: [...own.values(), ...ext],
   }
@@ -210,7 +224,7 @@ body { padding:0 14mm; font-family:'HW Grotesk',sans-serif; font-variant-numeric
 .stat .v { font-family:'HW XWide'; font-weight:500; font-size:15pt; margin-top:1.6mm; white-space:nowrap; }
 .stat .v small { font-family:'HW Wide'; font-size:7.5pt; color:#bdbdb8; margin-left:1mm; }
 
-.logi { display:grid; grid-template-columns:1fr 1.25fr 1.25fr; height:62px; align-items:stretch; box-shadow:inset 0 -.5pt 0 var(--g2); }
+.logi { display:grid; grid-template-columns:1fr 1.25fr 1.25fr 0.95fr; height:62px; align-items:stretch; box-shadow:inset 0 -.5pt 0 var(--g2); }
 .lg { padding:4mm 4mm 3.6mm 0; }
 .lg + .lg { padding-left:4mm; border-left:.5pt solid var(--g2); }
 .lg .k { font-family:'HW Wide'; font-size:6pt; letter-spacing:.16em; text-transform:uppercase; color:var(--g3); }
@@ -309,7 +323,7 @@ ${pageCss}</style></head><body>
 <div class="stat"><div class="k">Stückzahl</div><div class="v">${s.quantity}</div></div>
 <div class="stat"><div class="k">Miete</div><div class="v">${s.rentPositions}<small>Pos. · ${s.rentQuantity} Stk.</small></div></div></div>
 </header>
-<div class="logi">${lg('Drehzeitraum', data.dreh)}${lg('Ausleihe', data.ausleihe)}${lg('Rückleihe', data.rueckleihe)}</div>
+<div class="logi">${lg('Drehzeitraum', data.dreh)}${lg('Ausleihe', data.ausleihe)}${lg('Rückleihe', data.rueckleihe)}${lg('Transport', data.transport)}</div>
 <div class="legend"><span class="item">${srcTag('Hillward')}<span class="lbl">Eigenbestand</span></span><span class="item">${srcTag('Rent')}<span class="lbl">Miete</span></span>${removedNote}</div>
 ${blocks}${empty}
 </body></html>`

@@ -1,6 +1,6 @@
 {
   "name": "hillward-shared",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Gemeinsame Logik für hillward-rental und lightbase: Matching, Verfügbarkeit, Lightlist-PDF-Vorlage.",
   "type": "module",
   "main": "src/index.mjs",
