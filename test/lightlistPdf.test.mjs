@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   buildLightlistRows, summarizeLightlist, rentalSectionFor, groupLightlistSections, sourceKind, formatRange,
-  lightlistFromLightbase, lightlistFromRental, renderLightlistHtml, transportLabel,
+  lightlistFromLightbase, lightlistFromRental, renderLightlistHtml, transportLabel, splitNote,
 } from '../src/lightlistPdf.mjs'
 
 const projekt = {
@@ -129,5 +129,43 @@ describe('Transport', () => {
     expect(lightlistFromRental({ project: { name: 'x' } }).transport).toBe('Offen')
     expect(lightlistFromRental({ project: { name: 'x' }, transport: 'Hillward E-Sprinter' }).transport).toBe('Hillward E-Sprinter')
     expect(renderLightlistHtml(lightlistFromLightbase(p))).toContain('<div class="k">Transport</div><div class="v">Mietsprinter</div>')
+  })
+})
+
+describe('Seitenumbruch', () => {
+  const items = (n, section = 'Grip') => Array.from({ length: n }, (_, i) => ({ section, qty: 1, name: `${section} ${i + 1}`, source: 'Rent' }))
+  it('hält kurze Rubriken zusammen', () => {
+    const html = renderLightlistHtml({ number: 1, name: 'x', items: items(8) })
+    expect(html).toContain('<section class="cat keep">')
+    expect(html).not.toContain('class="lead"')
+  })
+  it('lässt lange Rubriken umbrechen, Kopf im thead (wiederholt sich), Anfang und Ende bleiben zusammen', () => {
+    const html = renderLightlistHtml({ number: 1, name: 'x', items: items(28) })
+    expect(html).toContain('<section class="cat">')
+    expect(html).toMatch(/<thead><tr><th class="cat-th" colspan="4"><div class="cat-head">.*<h2>Grip<\/h2>/)
+    expect(html.match(/<tbody class="lead">(.*?)<\/tbody>/)[1].match(/<tr/g)).toHaveLength(3)
+    expect(html.match(/<tbody class="tail">(.*?)<\/tbody>/)[1].match(/<tr/g)).toHaveLength(2)
+    expect(html).not.toMatch(/\.cat \{[^}]*break-inside/)
+  })
+})
+
+describe('Bemerkungen', () => {
+  it('trennt Status-Tags aus lightbase vom freien Text', () => {
+    expect(splitNote('NEU')).toEqual({ tags: ['NEU'], text: '' })
+    expect(splitNote('ÄNDERUNG · mit Tasche')).toEqual({ tags: ['ÄNDERUNG'], text: 'mit Tasche' })
+    expect(splitNote('2 MEHR')).toEqual({ tags: ['2 MEHR'], text: '' })
+    expect(splitNote('Foto – Butterfly Topping, Menge prüfen')).toEqual({ tags: [], text: 'Foto – Butterfly Topping, Menge prüfen' })
+    expect(splitNote('')).toEqual({ tags: [], text: '' })
+  })
+  it('zeigt Freitext umbrechend statt als Kästchen und macht die Spalte dann breiter', () => {
+    const html = renderLightlistHtml({ number: 1, name: 'x', items: [{ section: 'Grip', qty: 2, name: 'Wind Up', source: 'Rent', note: 'Foto – Butterfly Topping, Menge prüfen' }] })
+    expect(html).toContain('<span class="ntx">Foto – Butterfly Topping, Menge prüfen</span>')
+    expect(html).not.toContain('FOTO – BUTTERFLY')
+    expect(html).toContain('<col style="width:56mm">')
+  })
+  it('lässt Status-Tags als Kästchen in schmaler Spalte', () => {
+    const html = renderLightlistHtml(lightlistFromLightbase(projekt))
+    expect(html).toContain('<span class="tag note t-chg"><span class="t">ÄNDERUNG</span></span>')
+    expect(html).toContain('<col style="width:30mm">')
   })
 })

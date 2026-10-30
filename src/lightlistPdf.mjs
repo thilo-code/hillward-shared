@@ -195,6 +195,30 @@ function noteTag(note) {
   return `<span class="tag note ${cls}"><span class="t">${esc(u)}</span></span>`
 }
 
+/** Status-Tags wie NOTE_TAG in lightbase (positions-import): NEU, ÄNDERUNG, RAUS, „2 MEHR“, „1 WENIGER“. */
+const STATUS_TAG = /^(NEU|ÄNDERUNG|RAUS|\d+\s*(MEHR|WENIGER))$/i
+
+/**
+ * Bemerkung zerlegen: führende Status-Tags (mit „ · “ getrennt, z. B. „ÄNDERUNG · mit Tasche“) werden Kästchen,
+ * der Rest ist freier Text. Freitext als Kästchen lief bei langen Notizen rechts aus der Seite.
+ */
+export function splitNote(note) {
+  const parts = String(note ?? '').split(' · ').map((p) => p.trim()).filter(Boolean)
+  const tags = []
+  while (parts.length && STATUS_TAG.test(parts[0])) tags.push(parts.shift())
+  return { tags, text: parts.join(' · ') }
+}
+
+function noteCell(note) {
+  const { tags, text } = splitNote(note)
+  return tags.map(noteTag).join('') + (text ? `<span class="ntx">${esc(text)}</span>` : '')
+}
+
+/** Rubriken bis zu dieser Zeilenzahl bleiben auf einer Seite; längere laufen über den Seitenumbruch. */
+const KEEP_ROWS = 8
+/** Bei längeren Rubriken bleiben die ersten bzw. letzten Zeilen beim Kopf bzw. beieinander (keine einzelne Zeile allein). */
+const LEAD_ROWS = 3, TAIL_ROWS = 2
+
 function fontFaces(fontBaseUrl = 'fonts/') {
   const u = (f) => `${fontBaseUrl}${f}`
   return `@font-face{font-family:'HW Grotesk';font-weight:400;src:url(${u('StaffGrotesk-Regular.woff2')}) format('woff2');}
@@ -235,7 +259,9 @@ body { padding:0 14mm; font-family:'HW Grotesk',sans-serif; font-variant-numeric
 .legend .item > .lbl { display:block; line-height:1; text-box:trim-both cap alphabetic; }
 .legend .note { margin-left:auto; color:var(--g3); }
 
-.cat { break-inside:avoid; margin-top:34px; }
+.cat { margin-top:34px; }
+.cat.keep, tbody.lead, tbody.tail, tr { break-inside:avoid; }
+th.cat-th { height:auto; padding:0; border:0; font:inherit; letter-spacing:normal; text-transform:none; color:inherit; }
 .cat-head { display:flex; justify-content:space-between; align-items:flex-end; height:30px; padding-bottom:9px; box-shadow:inset 0 -2px 0 var(--ink); }
 .cat-title { display:flex; align-items:baseline; gap:3mm; }
 .cat-no { font-family:'HW Wide'; font-size:7pt; color:var(--g3); letter-spacing:.08em; }
@@ -248,6 +274,8 @@ th { font-family:'HW Wide'; font-weight:400; font-size:5.8pt; letter-spacing:.18
 td { height:25px; padding:0; border-bottom:.5pt solid var(--g2); vertical-align:middle; }
 td .cell { display:flex; align-items:center; height:25px; padding-right:2mm; min-width:0; }
 td.qty .cell { justify-content:flex-end; padding-right:4mm; }
+td.nt .cell { gap:1.5mm; height:auto; min-height:25px; padding-top:5px; padding-bottom:5px; }
+.ntx { font-size:7.8pt; line-height:1.25; min-width:0; overflow-wrap:break-word; }
 th.qty { text-align:right; padding-right:calc(5.6mm - .18em); white-space:nowrap; }
 .t { display:block; line-height:1; text-box:trim-both cap alphabetic; white-space:nowrap; }
 td.qty .t { font-family:'HW Wide'; font-weight:500; font-size:9pt; }
@@ -286,19 +314,28 @@ export function renderLightlistHtml(data, opts = {}) {
   const sub = ['Ausleihliste', data.vorlage ? `Vorlage ${data.vorlage}` : ''].filter(Boolean).join(' · ')
   const lg = (k, v) => `<div class="lg"><div class="k">${k}</div><div class="v">${v ? esc(v) : '–'}</div></div>`
 
+  // Freitext-Bemerkungen brauchen Platz: dann breitere Spalte (nur Status-Tags: schmal wie bisher).
+  const noteWidth = rows.some((r) => splitNote(r.note).text) ? '56mm' : '30mm'
   const blocks = sections.map((sec, i) => {
     const act = sec.rows.filter((r) => r.qty > 0)
-    const trs = sec.rows.map((r) => {
+    const tr = (r) => {
       const cls = [sourceKind(r.source) === 'hillward' ? 'is-hw' : '', r.qty === 0 ? 'is-out' : ''].filter(Boolean).join(' ')
       return `<tr class="${cls}"><td class="qty"><div class="cell"><span class="t">${r.qty}</span></div></td>` +
         `<td class="art"><div class="cell"><span class="t">${esc(r.name)}</span></div></td>` +
         `<td class="src"><div class="cell">${srcTag(r.source)}</div></td>` +
-        `<td class="nt"><div class="cell">${noteTag(r.note)}</div></td></tr>`
-    }).join('')
-    return `<section class="cat"><div class="cat-head"><div class="cat-title"><span class="cat-no">${String(i + 1).padStart(2, '0')}</span><h2>${esc(sec.name)}</h2></div>` +
-      `<div class="cat-meta">${act.length} Pos. <span class="dot">·</span> ${act.reduce((a, r) => a + r.qty, 0)} Stk.</div></div>` +
-      `<table><colgroup><col style="width:15mm"><col><col style="width:21mm"><col style="width:30mm"></colgroup>` +
-      `<thead><tr><th class="qty">Menge</th><th>Artikel</th><th class="src">Quelle</th><th>Bemerkung</th></tr></thead><tbody>${trs}</tbody></table></section>`
+        `<td class="nt"><div class="cell">${noteCell(r.note)}</div></td></tr>`
+    }
+    // Kurze Rubriken bleiben zusammen. Lange laufen über die Seite: Rubrik- und Spaltenkopf (thead) wiederholen sich
+    // oben auf der Folgeseite, die ersten Zeilen bleiben beim Kopf, die letzten beieinander.
+    const keep = sec.rows.length <= KEEP_ROWS
+    const bodies = keep
+      ? [['', sec.rows]]
+      : [['lead', sec.rows.slice(0, LEAD_ROWS)], ['', sec.rows.slice(LEAD_ROWS, -TAIL_ROWS)], ['tail', sec.rows.slice(-TAIL_ROWS)]]
+    const tbodies = bodies.filter(([, rs]) => rs.length).map(([cls, rs]) => `<tbody${cls ? ` class="${cls}"` : ''}>${rs.map(tr).join('')}</tbody>`).join('')
+    return `<section class="cat${keep ? ' keep' : ''}"><table><colgroup><col style="width:15mm"><col><col style="width:21mm"><col style="width:${noteWidth}"></colgroup>` +
+      `<thead><tr><th class="cat-th" colspan="4"><div class="cat-head"><div class="cat-title"><span class="cat-no">${String(i + 1).padStart(2, '0')}</span><h2>${esc(sec.name)}</h2></div>` +
+      `<div class="cat-meta">${act.length} Pos. <span class="dot">·</span> ${act.reduce((a, r) => a + r.qty, 0)} Stk.</div></div></th></tr>` +
+      `<tr><th class="qty">Menge</th><th>Artikel</th><th class="src">Quelle</th><th>Bemerkung</th></tr></thead>${tbodies}</table></section>`
   }).join('')
   const empty = rows.length ? '' : '<div class="empty"><div class="t">Noch keine Positionen</div><div class="s">Diese Liste enthält noch kein Equipment.</div></div>'
   const removedNote = s.removed ? `<span class="note">${s.removed} Position${s.removed !== 1 ? 'en' : ''} entfernt (Menge 0) – durchgestrichen.</span>` : ''
